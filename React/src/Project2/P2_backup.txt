@@ -1,0 +1,375 @@
+import React, { useEffect ,useReducer, useRef } from "react";
+import { ThemeProvider } from "@mui/material/styles";
+import {
+  Toolbar,
+  Card,
+  AppBar,
+  CardHeader,
+  CardContent,
+  Checkbox,
+  Dialog,
+  DialogContent,
+  DialogTitle,
+  IconButton,
+  Icon,
+  Radio,
+  RadioGroup,
+  FormControl,
+  FormControlLabel,
+  Typography,
+  TextField,
+  Button,
+} from "@mui/material";
+import theme from "../theme";
+import "../App.css";
+import io from "socket.io-client";
+import ChatMsg from "./chatmsg";
+import ChatIcon from '@mui/icons-material/Chat';
+import Accessibility from "@mui/icons-material/Accessibility";
+import UserMessageList from "./usermessagelist";
+import PortraitIcon from '@mui/icons-material/Portrait';
+
+const Project2Component = () => {
+    const socket = io.connect("localhost:5000", {
+                    forceNew: true,
+                    transports: ["websocket"],
+                    autoConnect: true,
+                    reconnection: false,
+                    timeout: 5000,
+                }
+    );
+
+    // const socket = io.connect();
+
+    const initialState = {
+        chatName: '',
+        chatRoom:'',
+        messages: [],
+        userRooms: [],
+        dialogUserRooms: [],
+        status: 'enter a chat name',
+        nameAlreadyExists: false,
+        showJoinFields: true,
+        isTyping: false,
+        typingMsg: "",
+        message: "",
+        roomJoined: false,
+        helpTextRoom: "enter a room name",
+        radioGroupValue: '',
+        openDialog: false,
+        //socket:socket
+    };
+
+    const reducer = (state, newState) => ({ ...state, ...newState });
+    const [state, setState] = useReducer(reducer, initialState);
+    const effectRan = useRef(false);
+    
+
+	useEffect(() => {
+		reachServer();
+	}, []);
+
+    const reachServer = async () => {
+        try{
+            // const socket = io.connect("localhost:5000", {
+            //         forceNew: true,
+            //         transports: ["websocket"],
+            //         autoConnect: true,
+            //         reconnection: false,
+            //         timeout: 5000,
+            //     });
+            // connect to server
+            //const socket = io.connect();
+
+            //setState({socket:socket});
+            //socket.on("newroomadded", newRoomAdded);
+            //console.log(`Populating rooms`);
+            socket.emit(
+                "getrooms",
+                err => {}
+            );
+            socket.on("allrooms", roomsAdded);
+            //console.log(state.userRooms);
+        }
+        catch(err)
+        {
+            console.log(err);
+        }
+    }
+    
+
+    const addMessageToList = (msg) => {
+        let messages = state.messages;
+        messages.push(msg);
+        setState({
+            messages: messages,
+        });
+    };
+
+    const roomsAdded = (msg) => {
+        setState({
+            userRooms: msg,
+        });
+    };
+
+    // const newRoomAdded = (msg) => {
+    //     let rooms = state.userRooms;
+    //     rooms.push(msg);
+    //     setState({
+    //         userRooms: rooms,
+    //     });
+    // };
+
+    const onTyping = (msg) => {
+        if (msg.from !== state.chatName) {
+            setState({
+                typingMsg: msg
+            });
+        }
+    };
+
+    const onExists = (msg, socket) => {
+        //socket.disconnect();
+        setState({ 
+            status: msg,
+            showJoinFields: true, 
+            nameAlreadyExists: true,
+            roomJoined: false,
+            radioGroupValue: '',
+            chatRoom: '',
+        });
+    };
+
+    const onNameChange = (e) => {
+        setState({ chatName: e.target.value });
+    };
+
+    const onRoomChange = (e) => {
+        setState({ chatRoom: e.target.value, radioGroupValue:"" });
+    };
+
+    // keypress handler for message TextField
+    const onMessageChange = e => {
+        setState({ message: e.target.value });
+        if (state.isTyping === false) {
+            state.socket.emit("typing", { from: state.chatName }, err => {});
+            setState({ isTyping: true }); // flag first byte only
+        }
+    };
+
+    const onNewMessage = (msg) => {
+        addMessageToList(msg);
+        setState({ typingMsg: ""});
+    };
+
+    // enter key handler to send message
+    const handleSendMessage = e => {
+        if (state.message !== "") {
+            state.socket.emit(
+                "message",
+                { from: state.chatName, text: state.message },
+                err => {}
+            );
+            setState({ isTyping: false, message: "" });
+        }
+    };
+
+    const serverConnect = async () => {
+        try {
+            // const socket = io.connect("localhost:5000", {
+            //     forceNew: true,
+            //     transports: ["websocket"],
+            //     autoConnect: true,
+            //     reconnection: false,
+            //     timeout: 5000,
+            // });
+
+            // connect to server
+            //const socket = io.connect();
+
+            
+            socket.emit("join",  { name: state.chatName, room: state.chatRoom }, (err) => {});
+            setState({showJoinFields: false, socket: socket});
+            socket.emit(
+                "newroom",
+                {text: state.chatRoom},
+                err => {}
+            );
+            
+            
+            socket.on("nameexists", (data) => onExists(data, socket));
+            socket.on("welcome", addMessageToList);
+            socket.on("someonejoined", addMessageToList);
+            socket.on("someoneistyping", (data) => onTyping(data, socket));
+            socket.on("newmessage", onNewMessage);
+            socket.on("someoneleft", addMessageToList);
+            socket.on("roomsandusers", populateDialogInfo);
+            socket.emit(
+                "getrooms",
+                err => {}
+            );
+            socket.on("allrooms", roomsAdded);
+            setState({roomJoined: true});
+        } catch (err) {
+            console.log(err);
+        }
+        
+    };
+
+    const handleRadioChange = (e) => {
+        setState({chatRoom: e.target.value});
+        if (e.target.value === state.radioGroupValue) {
+            setState({radioGroupValue:"", chatRoom:""});
+        } else {
+            setState({radioGroupValue:e.target.value});
+        }
+    }
+
+    const populateDialogInfo = (info) => {
+        setState({dialogUserRooms: info});
+    }
+
+    const handleOpenDialog = () => {
+        state.socket.on("roomsandusers", populateDialogInfo);
+        setState({ openDialog: true });
+    }
+	const handleCloseDialog = () => setState({ openDialog: false });
+
+    return (
+        <ThemeProvider theme={theme}>
+            <AppBar color="primary" style={{ marginBottom: "5vh" }}>
+                <Toolbar>
+                    <Typography variant="h6" color="text">
+                        Chat It Up! - INFO3139
+                    </Typography>
+                    {state.roomJoined ? (
+                        <section style={{ height: 60, width: 60, marginLeft: "auto" }}>
+                            <IconButton onClick={handleOpenDialog}>
+                                <Accessibility style={{ color: "white", height: 40, width: 40 }} />
+                            </IconButton>
+				        </section>
+                    ) 
+                    : null
+                    }
+                    <Dialog open={state.openDialog} onClose={handleCloseDialog} style={{ margin: 20 }}>
+                        <DialogTitle style={{ textAlign: "center" }}>
+                            <Typography fontSize="large" color="primary">Who's On</Typography>
+                        </DialogTitle>
+                        <DialogContent>
+                            {state.dialogUserRooms.map((info, index) => (
+                                <div key={index} style={{display: "flex", justifyContent:"left", alignItems: "left", flexDirection:"row"}}>
+                                    <PortraitIcon style={{ color: info.color }}  fontSize="small" />
+                                    <Typography><span className="tab"></span>{info.user} is in room {info.room}</Typography>
+                                </div>
+                            ))}
+                        </DialogContent>
+                    </Dialog>
+                </Toolbar>
+            </AppBar>
+            <Card className="card">
+                {state.roomJoined ? null :
+                    (
+                        <div>
+                            <div style={{display: "flex", justifyContent:"center", alignItems: "center"}}>
+                                <ChatIcon  color="primary" fontSize="large"/>
+                            </div>
+                            <Typography style={{display: "flex", justifyContent:"center", fontWeight:"bold"}} color="primary">Sign In</Typography>
+                        </div>
+                    )
+                }
+                <CardContent>
+                    {state.showJoinFields ? (
+                    <div>
+                        <div style={{border: '1px ridge', width: "40", padding: "15px 50px 25px 20px"}}> {/*top right bottom left*/}
+                            <TextField
+                                required
+                                onChange={onNameChange}
+                                placeholder="Enter unique name"
+                                autoFocus={true}
+                                value={state.chatName}
+                                error={state.nameAlreadyExists || state.chatName === ""}
+                                helperText={(state.nameAlreadyExists || state.chatName === "")&&state.status}
+                            />
+                        </div>
+                        <div style={{border: '1px ridge', padding: "15px 30px 25px 20px"}}>
+                            <Typography color="primary">Join Existing or Enter Room Name</Typography>
+                            <br/>
+                            <FormControl>
+                                <RadioGroup 
+                                    name="room-buttons-group" 
+                                    value={state.radioGroupValue}
+                                >
+                                    <FormControlLabel value={"main"} control={<Radio onClick={handleRadioChange} />} label={"Main"} />
+                                    {state.userRooms.map((room, index) => (
+                                         <FormControlLabel key={index} value={room} control={<Radio onClick={handleRadioChange} />} label={room} />
+                                        ))
+                                    }
+                                </RadioGroup>
+                            </FormControl>
+                            <br/>
+                            <TextField
+                                placeholder="Enter room name "
+                                onChange={onRoomChange}
+                                value={state.chatRoom}
+                                error={state.chatRoom === ""}
+                                helperText={state.chatRoom === ""&&state.helpTextRoom}
+                            />
+                        </div>
+                        <div>
+                            <Button
+                                variant="contained"
+                                data-testid="submit"
+                                style={{
+                                    marginRight: "3%",
+                                    marginTop: "5%",
+                                    marginBottom: "3%",
+                                    float: "left",
+                                }}
+                                onClick={()=>serverConnect()}
+                                disabled={
+                                    (state.chatName === "" || state.chatRoom === "") && 
+                                    (state.chatName === "" || state.radioGroupValue === "")
+                                }
+                            >
+                                Join
+                            </Button>
+                        </div>
+                    </div>
+                    ) :
+                        <div>
+                            <div className="scenario-container">
+                                <div className="usersList">
+                                    <UserMessageList messages={state.messages} sender={state.chatName}/>
+                                </div>
+                                <div style={{marginTop:"1vh"}}>
+                                    <TextField
+                                        style={{width:"100%"}}
+                                        onChange={onMessageChange}
+                                        placeholder="type something here"
+                                        autoFocus={true}
+                                        value={state.message}
+                                        onKeyPress={(e) => {
+                                            if (e.key === "Enter") {
+                                                handleSendMessage();
+                                                e.target.blur();
+                                            }
+                                        }}
+                                    />
+                                    <div>
+                                        <Typography fontWeight="bold" fontSize="13px" color="red">
+                                            {state.typingMsg}
+                                        </Typography>
+                                    </div>
+                                </div>
+                                 
+                            </div>
+                        </div>
+                    }
+                </CardContent>
+                
+            </Card>
+        </ThemeProvider>
+    );
+};
+
+export default Project2Component;

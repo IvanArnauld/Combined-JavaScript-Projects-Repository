@@ -1,0 +1,22 @@
+{
+   "name": "chatitup",
+   "type": "module",
+   "version": "1.0.0",
+   "description": "Case 2: Chat It Up!",
+   "main": "app.js",
+   "author": "Ivan Kepseu",
+   "license": "ISC",
+   "engines": {
+      "node": "16.13"
+   },
+   "dependencies": {
+      "dotenv": "^16.0.3",
+      "express": "^4.18.2",
+      "socket.io": "^4.6.1",
+      "moment": "^2.29.4"
+   },
+   "scripts": {
+      "start": "node app.js"
+   },
+   "devDependencies": {}
+}

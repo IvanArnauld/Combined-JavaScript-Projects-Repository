@@ -1,0 +1,77 @@
+.bigred {
+  font-family: "Courier New";
+  font-style: italic;
+  font-size: xx-large;
+  color: red;
+}
+.light {
+  border: solid;
+  width: 4.25rem;
+}
+.lamp {
+  height: 3rem;
+  width: 3rem;
+  border-style: solid;
+  border-width: 2px;
+  border-radius: 50%;
+}
+.flex-container {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-evenly;
+  align-items: center;
+  width: 100vw;
+  margin-bottom: 50vh;
+}
+.scenario-container {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+.scenario-message {
+  color: white;
+  width: 80%;
+  margin: 1px;
+  padding: 1em;
+  font-size: smaller;
+  font-weight: bold;
+}
+.tab {
+  display: inline-block;
+  margin-left: 20px;
+}
+.tab-bubble {
+  display: inline-block;
+  margin-left: 80px;
+}
+.usersList {
+  margin-bottom: 1vh;
+  box-sizing: border-box;
+  height: calc(70vh);
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+.userBubble {
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: smaller;
+  position: relative;
+  padding: 3vw;
+  width: 50vw;
+  margin-bottom: -1em;
+  border-radius: 10px;
+  color: white;
+}
+body {
+  place-items: unset !important;
+  overflow: auto;
+}
+html, body, #app, #app>div {
+  height: 90%
+}
+.card {
+  margin-top: 10vh;
+  width: 100%;
+}
+@media only screen and (max-width: 600px) {
+
+}
